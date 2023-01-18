@@ -59,6 +59,9 @@ portObj.open(function(error){
 });
 
 function sendSerialCommand(commandString){
+    if(commandString[commandString.length - 1] !== '\u000d'){
+        commandString += '\u000d';
+    }
     portObj.write(commandString, function(err){
         if(err){
             serialCommError(err);
@@ -73,16 +76,40 @@ function serialCommError(err){
 // Add event listener to incoming data
 portObj.on('data', function(data) {
     // get buffered data and parse it to an utf-8 string
-    data = data.toString('utf-8');
+    data = data.toString("UTF-8");
     // you could for example, send this data now to the client via socket.io
     // io.emit('emit_data', data);
-    console.log("Returned From Device");
+    let dataArray = data.split("\u000a\u000d");
+    if(dataArray.length === 1){
+        serialCommError("Command Send with no reply (check syntax");
+    }
+    if(dataArray.length === 2){
+        serialCommError("Command Executed Successfully. Device Readiness not read in response buffer (flush then try again");
+    }
+    console.log("DEVICE IO");
     console.log("--------------------");
-    console.log(data);
+    console.log(dataArray);
     console.log("--------------------");
 });
 
-sendSerialCommand("ver\r");
+console.log("ver\r".length);
+
+sendSerialCommand("ver\u000d");
+//Also
+//sendSerialCommand("ver\r");
+
+/*
+PortObj.data records all I/O!
+
+Output Meaning
+76 65 72 0a 0d 41 30 4d 31 30 2e 30 31 0a 0d 3e
+v  e  r  NL CR A  0  M  1  0  .  0  1  NL CR >
+
+ver : sent
+A0M10.01 : received
+> : ready
+
+*/
 
 
 

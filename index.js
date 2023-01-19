@@ -1,9 +1,15 @@
 // set up handler for local ini file config
 const fs = require('fs');
 const ini = require('ini');
-const localconfig = ini.parse(fs.readFileSync('db.ini', 'utf-8'));
-console.log(localconfig.host);
-const {createConnection} = require("mysql");
+let localconfig = {
+    host: 'host',
+    db_name: 'guest',
+    db_user: 'Cyril',
+    db_pw: 'guest'
+};
+localconfig = ini.parse(fs.readFileSync('db.ini', 'utf-8'));
+
+const mysql = require("mysql");
 
 // Set up hardware process for GPIO
 const SerialPort = require('serialport').SerialPort;
@@ -70,7 +76,7 @@ function sendSerialCommand(commandString){
 }
 
 function serialCommError(err){
-    console.log("Serial Object Error: " + err);
+    console.log("Serial Communications Error: " + err);
 }
 
 // Add event listener to incoming data
@@ -81,7 +87,11 @@ portObj.on('data', function(data) {
     // io.emit('emit_data', data);
     let dataArray = data.split("\u000a\u000d");
     if(dataArray.length === 1){
-        serialCommError("Command Send with no reply (check syntax");
+        if(dataArray === ["\u003e"]){
+            console.log("Delayed Reply From Successful Execution of Command");
+        }else {
+            serialCommError("Command Send with no reply (check syntax)");
+        }
     }
     if(dataArray.length === 2){
         serialCommError("Command Executed Successfully. Device Readiness not read in response buffer (flush then try again");
@@ -92,14 +102,14 @@ portObj.on('data', function(data) {
     console.log("--------------------");
 });
 
-console.log("ver\r".length);
-
 sendSerialCommand("ver\u000d");
+console.log("\u003e".toString())
 //Also
 //sendSerialCommand("ver\r");
 
 /*
 PortObj.data records all I/O!
+sendSerialCommand("ver\u000d");
 
 Output Meaning
 76 65 72 0a 0d 41 30 4d 31 30 2e 30 31 0a 0d 3e
@@ -110,7 +120,6 @@ A0M10.01 : received
 > : ready
 
 */
-
 
 
 //create card listener:
@@ -128,6 +137,7 @@ const cardListener = {
             }
             if(this.cardNumber.length === this.cardLength){
                 console.log("Successful Read: " + this.cardNumber);
+                dbHandler.verifyCard(this.cardNumber);
                 this.endReader();
             }
         }
@@ -147,15 +157,45 @@ const cardListener = {
             cardListener.endReader();
         }, this.readStateTimeout);
     },
-    isReading(){
+    isReading: function(){
         return this.readState;
     }
 };
 
 //create database handler
 const dbHandler = {
-    mysql : require('mysql'),
-    connection : createConnection({
-
-    })
+    mysql : mysql,
+    connection : mysql.createConnection({
+        host: localconfig.host,
+        user: localconfig.db_user,
+        password: localconfig.db_pw,
+        database: localconfig.db_name
+    }),
+    connect: function(){
+        this.connection.connect(function(error){
+            if(error){
+                databaseError(error);
+            }else{
+                console.log("Connection Successful!")
+            }
+        })
+    },
+    verifyCard: function(card){
+        let sql="Select bid, active_state from allowed_entry where bid = " + card + ";"
+        this.connection.query(sql, [true], (error, results, fields) => {
+            if(error){
+                console.log(error);
+            }
+            if(results){
+                console.log(results);
+            }
+        });
+    }
 };
+
+dbHandler.connect();
+
+
+function databaseError(error){
+    console.log("Database Error: " + error);
+}

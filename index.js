@@ -9,6 +9,7 @@ let localconfig = {
 };
 localconfig = ini.parse(fs.readFileSync('db.ini', 'utf-8'));
 
+// MySQL
 const mysql = require("mysql");
 
 // Set up hardware process for GPIO
@@ -86,6 +87,10 @@ portObj.on('data', function(data) {
     // you could for example, send this data now to the client via socket.io
     // io.emit('emit_data', data);
     let dataArray = data.split("\u000a\u000d");
+    console.log("DEVICE IO");
+    console.log("--------------------");
+    console.log(dataArray);
+    console.log("--------------------");
     if(dataArray.length === 1){
         if(dataArray === ["\u003e"]){
             console.log("Delayed Reply From Successful Execution of Command");
@@ -94,20 +99,23 @@ portObj.on('data', function(data) {
         }
     }
     if(dataArray.length === 2){
-        serialCommError("Command Executed Successfully. Device Readiness not read in response buffer (flush then try again");
+        if(dataArray[1] === "\u003e"){
+            console.log("Success");
+        }else {
+            serialCommError("Command Executed Successfully. Device Readiness not read in response buffer (flush then try again)");
+        }
     }
-    console.log("DEVICE IO");
-    console.log("--------------------");
-    console.log(dataArray);
-    console.log("--------------------");
+    if(dataArray.length === 3){
+        console.log("Success");
+    }
 });
 
 sendSerialCommand("ver\u000d");
-console.log("\u003e".toString())
 //Also
 //sendSerialCommand("ver\r");
 
 /*
+IMPORTANT!
 PortObj.data records all I/O!
 sendSerialCommand("ver\u000d");
 
@@ -176,7 +184,7 @@ const dbHandler = {
             if(error){
                 databaseError(error);
             }else{
-                console.log("Connection Successful!")
+                console.log("Database Connection Successful!")
             }
         })
     },
@@ -190,6 +198,11 @@ const dbHandler = {
                 console.log(results);
             }
         });
+        /*
+        * Returns-
+        * If Found : [ RowDataPacket { bid: 900013663, active_state: '1' } ]
+        * If Not : []
+        * */
     }
 };
 
@@ -199,3 +212,5 @@ dbHandler.connect();
 function databaseError(error){
     console.log("Database Error: " + error);
 }
+
+sendSerialCommand('gpio clear 6');

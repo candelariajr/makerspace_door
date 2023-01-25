@@ -4,9 +4,9 @@ const ini = require('ini');
 let localconfig = {
     host: 'host',
     db_name: 'guest',
-    db_user: 'Cyril',
+    db_user: 'Cyril Figgis',
     db_pw: 'guest'
-};
+};  // Dummy Values
 localconfig = ini.parse(fs.readFileSync('db.ini', 'utf-8'));
 
 // MySQL
@@ -19,14 +19,15 @@ const SerialPort = require('serialport').SerialPort;
 let stdin = process.stdin;
 stdin.setRawMode(true);
 stdin.resume();
-stdin.setEncoding('utf8');
+stdin.setEncoding('utf-8');
 console.log("Await Input");
 stdin.on('data', function( key){
     if(key === '\u0003'){
         //By creating a listener, the default is overridden so the Control-C exit command must still exist.
         //A card made by the University will never have this.
         //TODO: make a fix for security reasons and accidental halt interpretation without restart
-        console.log("Exit");
+        portObj.close();
+        console.log("Exiting");
         process.exit();
     }else{
         //process.stdout.write(key);
@@ -84,7 +85,7 @@ function serialCommError(err){
 portObj.on('data', function(data) {
     // get buffered data and parse it to an utf-8 string
     data = data.toString("UTF-8");
-    // you could for example, send this data now to the client via socket.io
+    // you could for example, send this data now to the client via socket.io library
     // io.emit('emit_data', data);
     let dataArray = data.split("\u000a\u000d");
     console.log("DEVICE IO");
@@ -195,7 +196,13 @@ const dbHandler = {
                 console.log(error);
             }
             if(results){
-                console.log(results);
+                if(results.length > 0){
+                    console.log(results[0]['bid']);
+                    sendSerialCommand('gpio set 6');
+                    setTimeout(function(){
+                        sendSerialCommand('gpio clear 6')
+                    }, 3000)
+                }
             }
         });
         /*
@@ -212,5 +219,3 @@ dbHandler.connect();
 function databaseError(error){
     console.log("Database Error: " + error);
 }
-
-sendSerialCommand('gpio clear 6');

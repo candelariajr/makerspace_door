@@ -41,18 +41,19 @@ begin
     select(@delimiter_count);
 
 
-	declare strLen int 9;
+    declare strLen int 9;
     if bid_array is null then
-		set bid_array = '';
-	end if;
+        set bid_array = '';
+    end if;
     
     drop table if exists temp_array;
     create table temp_array(
-		bid varchar(9)
+        bid varchar(9)
     );
     
+    ## loop syntax
     process:
-		loop
+	loop
 	end loop process;
     
 end;

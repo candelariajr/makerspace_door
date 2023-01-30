@@ -28,5 +28,36 @@ create table if not exists foreign_import(
     manual_remove char(1) default '0'
 );
 
+# function stub
+delimiter //
+create function import(in bid_array varchar(4096))
+begin
+    ## test cpde for counting delimiters
+    set @test_string = '123,456,789,4654,78978';
+    ## select(@test_string);
+    
+    ## find out number of occurances of the delimiter
+    set @delimiter_count = round(length(@test_string) - length(replace(@test_string, ',', "")));
+    select(@delimiter_count);
+
+
+	declare strLen int 9;
+    if bid_array is null then
+		set bid_array = '';
+	end if;
+    
+    drop table if exists temp_array;
+    create table temp_array(
+		bid varchar(9)
+    );
+    
+    process:
+		loop
+	end loop process;
+    
+end;
+end delimiter //
+
+
 insert into allowed_entry (bid) values 
 (900013663);

@@ -174,26 +174,41 @@ const cardListener = {
 //create database handler
 const dbHandler = {
     mysql : mysql,
-    connection : mysql.createConnection({
-        host: localconfig.host,
-        user: localconfig.db_user,
-        password: localconfig.db_pw,
-        database: localconfig.db_name
-    }),
+    connection : null,
+    setup: function(){
+        try{
+            this.connection = mysql.createConnection({
+                host: localconfig.host,
+                user: localconfig.db_user,
+                password: localconfig.db_pw,
+                database: localconfig.db_name
+            });
+            //Apply intercept handler if allowable
+            this.connection.on('error', function(err){
+                databaseError("LISTEN: " + err);
+            });
+        }catch(e){
+            databaseError("Connection Problem: " + e)
+        }
+    },
     connect: function(){
-        this.connection.connect(function(error){
-            if(error){
-                databaseError(error);
-            }else{
-                console.log("Database Connection Successful!")
-            }
-        })
+        try{
+            this.connection.connect(function(error){
+                if(error){
+                    databaseError(error);
+                }else{
+                    console.log("Database Connection Successful!")
+                }
+            });
+        } catch(error){
+            databaseError(error);
+        }
     },
     verifyCard: function(card){
         let sql="Select bid, active_state from allowed_entry where bid = " + card + ";"
         this.connection.query(sql, [true], (error, results, fields) => {
             if(error){
-                console.log(error);
+                databaseError(error);
             }
             if(results){
                 if(results.length > 0){
@@ -201,6 +216,11 @@ const dbHandler = {
                     sendSerialCommand('gpio set 6');
                     setTimeout(function(){
                         sendSerialCommand('gpio clear 6')
+                    }, 3000)
+                }else {
+                    sendSerialCommand('gpio set 7');
+                    setTimeout(function () {
+                        sendSerialCommand('gpio clear 7')
                     }, 3000)
                 }
             }
@@ -210,12 +230,35 @@ const dbHandler = {
         * If Found : [ RowDataPacket { bid: 900013663, active_state: '1' } ]
         * If Not : []
         * */
+    },
+    getLastSync: function(){
+        let sql="select variable_value from vars where variable_name = 'last_import'";
+        this.connection.query( sql, [true], (error, results, fields) => {
+            if(error){
+                databaseError(error);
+            }
+            if(results){
+                if(results.length > 0){
+                    return results[0]['variable_value'];
+                }
+            }
+        })
+    },
+    moodleImport: function(data){
+
     }
 };
-
+dbHandler.setup();
 dbHandler.connect();
 
 
 function databaseError(error){
     console.log("Database Error: " + error);
 }
+
+const moodleHandler = {
+    lastSync : null,
+    syncInterval : 60000 // 1 minute
+
+};
+

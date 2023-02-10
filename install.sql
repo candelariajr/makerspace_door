@@ -116,10 +116,25 @@ begin
     # if the first char is a letter -> 0
     # returns an int of the first numbers, then exits when the first letter in encountered
     
-    reconcile_array: loop
-		leave reconcile_array;
-    end loop;
-    
+    # MEAT AND POTATOES
+    # Check if condition is OK, then chop up the string into ints, verify, then populate temp_array
+    if failureCondition = 0 then
+		#chop the array down to a series of ints and import
+		reconcile_array: loop
+			# the string has been chopped down to 0
+			if length(bid_array) = 0 then
+				leave reconcile_array;
+            end if;
+			if length(bid_array) = 9 then
+				start transaction;
+					insert into temp_array (bid) values
+                    ('999999999');
+				commit;
+                leave reconcile_array;
+            end if;
+			leave reconcile_array;
+		end loop;
+	end if;
     
     if failureCondition = 0 then
 		## set returnString = "Success";
@@ -140,5 +155,5 @@ insert into allowed_entry (bid) values
 (900013663);
 
 # select import_array("123456789");
-call import_array('123456789,123654987,654123987,');
+call import_array('123456789');
 # select * from allowed_entry;

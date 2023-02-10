@@ -32,8 +32,9 @@ create table if not exists foreign_import(
 # Acceptible Formats:
 # "#########"
 # "#########, #########, ... #########"
-# Trailing commas and spaces are BAD, but will be trimmed. 
-# Other than that, there is no protection. 
+# Trailing commas and spaces are BAD, but will be trimmed in case of logic
+# screwups. 
+# Other than that, there is no protection (from rejection of the argument). 
 # Do not put letters, code, etc, as it will be flagged and kicked out
 delimiter //
 create procedure import_array(bid_array varchar(4096))
@@ -60,7 +61,6 @@ begin
     # passed from Node.js process
     set bid_array = trim(' ' from bid_array);
     set bid_array = trim(',' from bid_array);
-    
     
     # We can't run string length computations on null
     if bid_array is null then
@@ -90,14 +90,13 @@ begin
 	end if;
     
     #The rest of these statements will only happen if the argument structure appears to be valid
-    
     if failureCondition = 0 then 
 		start transaction;
-			set failureCondition = 1;
 			drop table if exists temp_array;
 			create table temp_array(
 				bid int(9)
 			);
+            set failureCondition = 1;
 		commit;
         # This makes more sence if you think about it from a Db perspective
         # As part of the creation of the table, failureCondition must be changed. 
@@ -110,6 +109,12 @@ begin
         end if;
     end if;
     
+    # test code...remove later. Procs have NO return type. 
+    # They act like a select statement.
+    # set returnString = cast('123456a9897' as signed);
+    # returns: 123456
+    # if the first char is a letter -> 0
+    # returns an int of the first numbers, then exits when the first letter in encountered
     
     reconcile_array: loop
 		leave reconcile_array;
@@ -120,10 +125,15 @@ begin
 		## set returnString = "Success";
         set failureCondition = 0;
     end if;    
-    select returnString as 'Status', failureCondition as 'Failure Condition';
+    select failureCondition as 'Failure Condition', returnString as 'Status';
 end; //
 delimiter ;
 
+delimiter //
+create procedure remote_sync()
+begin
+end; //
+delimiter ;
 
 
 insert into allowed_entry (bid) values 

@@ -28,45 +28,97 @@ create table if not exists foreign_import(
     manual_remove char(1) default '0'
 );
 
+# This is the ASULearn import function. It is ONLY for a string of BIDs
+# Acceptible Formats:
+# "#########"
+# "#########, #########, ... #########"
+# Trailing commas and spaces are BAD, but will be trimmed. 
+# Other than that, there is no protection. 
+# Do not put letters, code, etc, as it will be flagged and kicked out
 delimiter //
 create procedure import_array(bid_array varchar(4096))
 modifies sql data
 begin
+	# The return string is constantly overwritten as it acts as a 
+    # error/rejection reason or a marker as to when the proc was 
+    # stopped
+
 	# declare before set
+    # configuration variables
     declare strLen int;
-	declare returnString varchar(32);
+    # operation variables
+	declare returnString varchar(64);
     declare failureCondition int(1);
     
+    #configuration values
     set strLen = 9;
+    #operation values
     set failureCondition = 1;
     set returnString = "Failure on Startup";
     
+    # trimming spaces and commas as protection measures against logic errors
+    # passed from Node.js process
+    set bid_array = trim(' ' from bid_array);
+    set bid_array = trim(',' from bid_array);
+    
+    
+    # We can't run string length computations on null
     if bid_array is null then
-	 	set bid_array = '';
+        set failureCondition = 1;
+        set returnString = "Null given as proc argument";
+	 	# set bid_array = "";
 	end if;
     
-    if length(bid_array) = strLen then
-	 	set returnString = "TEST 2";
+    # Evaluate length of argument for validity
+	if length(bid_array) >= 9 then
+		if length(bid_array) = strLen then
+			set failureCondition = 0;
+            set returnString = "Length of Argument OK: Single Entry"; 
+		else
+			# complex logic, just move along
+			if mod((length(bid_array) - strLen), (strLen + 1)) != 0 then
+				set failureCondition = 1;
+                set returnString = "Length of Argument Wrong: Multiple Entries";
+			else	
+				set failureCondition = 0;
+                set returnString = "Length of Argument OK: Multiple Entries";
+			end if;
+		end if;
+	else
+		set failureCondition = 1;
+        set returnString = "Length of Argument Too Small";
 	end if;
     
-    start transaction;
-		drop table if exists temp_array;
-		create table temp_array(
-			bid varchar(9)
-		);
-		insert into temp_array(bid) values
-		('444444444');
-        set returnString = "temp_array created";		
-	commit;
+    #The rest of these statements will only happen if the argument structure appears to be valid
+    
+    if failureCondition = 0 then 
+		start transaction;
+			set failureCondition = 1;
+			drop table if exists temp_array;
+			create table temp_array(
+				bid int(9)
+			);
+		commit;
+        # This makes more sence if you think about it from a Db perspective
+        # As part of the creation of the table, failureCondition must be changed. 
+        # If the transaction breaks, the system reverts the database back to the
+        # state before the transaction. 
+        if failureCondition = 1 then
+			set failureCondition = 0;
+		else
+			set returnString = "Transaction Failure: temp_array table can't be initialized";
+        end if;
+    end if;
+    
     
     reconcile_array: loop
-		set failureCondition = 0;
 		leave reconcile_array;
     end loop;
     
     
     if failureCondition = 0 then
-		set returnString = "Success";
+		## set returnString = "Success";
+        set failureCondition = 0;
     end if;    
     select returnString as 'Status', failureCondition as 'Failure Condition';
 end; //
@@ -78,5 +130,5 @@ insert into allowed_entry (bid) values
 (900013663);
 
 # select import_array("123456789");
-call import_array("123456789");
+call import_array('123456789,123654987,654123987,');
 # select * from allowed_entry;

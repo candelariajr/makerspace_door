@@ -178,10 +178,10 @@ const dbHandler = {
     setup: function(){
         try{
             this.connection = mysql.createConnection({
-                host: localconfig.host,
-                user: localconfig.db_user,
-                password: localconfig.db_pw,
-                database: localconfig.db_name
+                host: localconfig.database.host,
+                user: localconfig.database.db_user,
+                password: localconfig.database.db_pw,
+                database: localconfig.database.db_name
             });
             //Apply intercept handler if allowable
             this.connection.on('error', function(err){
@@ -258,7 +258,11 @@ function databaseError(error){
 
 const moodleHandler = {
     lastSync : null,
-    syncInterval : 60000 // 1 minute
-
+    syncInterval : 60000, // 1 minute
+    getSyncFromFile: function(){
+        this.syncInterval = localconfig.software.get_grades_interval;
+        console.log(this.syncInterval);
+    }
 };
 
+moodleHandler.getSyncFromFile();

@@ -4,5 +4,6 @@ db_name = ''
 db_user = ''
 db_pw = ''
 [software]
+; These are in seconds: eg 60 = 1 minute, 600 = 10 minutes, etc.
 get_grades_interval = 0
 passing_grade = 0

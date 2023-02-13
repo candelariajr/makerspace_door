@@ -1,12 +1,28 @@
 // set up handler for local ini file config
 const fs = require('fs');
 const ini = require('ini');
+/*
 let localconfig = {
     host: 'host',
     db_name: 'guest',
     db_user: 'Cyril Figgis',
     db_pw: 'guest'
 };  // Dummy Values
+*/
+
+let localconfig ={
+    database: {
+        host: 'host',
+        db_name: 'guest',
+        db_user: 'Cyril Figgis',
+        db_pw: 'guest'
+    },
+    software: {
+        get_grades_interval: 'never',
+        passing_grade: 0
+    }
+};
+
 localconfig = ini.parse(fs.readFileSync('db.ini', 'utf-8'));
 
 // MySQL
@@ -261,7 +277,6 @@ const moodleHandler = {
     syncInterval : 60000, // 1 minute
     getSyncFromFile: function(){
         this.syncInterval = localconfig.software.get_grades_interval;
-        console.log(this.syncInterval);
     }
 };
 
